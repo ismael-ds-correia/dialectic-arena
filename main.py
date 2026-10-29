@@ -1,5 +1,10 @@
+import json
+import os
+import re
 import sys
+import unicodedata
 import uuid
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Garantir codificação UTF-8 no terminal Windows para evitar travamentos ou UnicodeEncodeError
@@ -42,6 +47,41 @@ def exibir_parecer_juiz(parecer: dict) -> None:
     print(justificativa)
     print()
     exibir_separador("-")
+
+
+def sanitizar_nome_diretorio(texto: str, tamanho_maximo: int = 50) -> str:
+    """Sanitiza o texto removendo acentos, caracteres especiais e substituindo espaços por hífens."""
+    # Normalizar caracteres unicode (remover acentuação)
+    texto_normalizado = unicodedata.normalize("NFKD", texto).encode("ASCII", "ignore").decode("ASCII")
+    # Manter apenas letras, números e espaços
+    texto_limpo = re.sub(r"[^a-zA-Z0-9\s-]", "", texto_normalizado).strip().lower()
+    # Substituir espaços em branco por hífens
+    slug = re.sub(r"[\s]+", "-", texto_limpo)
+    # Limitar o tamanho máximo sem quebrar no meio de hífens finais
+    return slug[:tamanho_maximo].rstrip("-") or "debate"
+
+
+def salvar_registro_debate(state: dict) -> str:
+    """Salva o histórico e o parecer do debate em formato JSON dentro de debates/<slug-alegacao>/."""
+    alegacao = state.get("alegacao") or state.get("claim", "")
+    pasta_slug = sanitizar_nome_diretorio(alegacao)
+    diretorio_destino = os.path.join("debates", pasta_slug)
+    os.makedirs(diretorio_destino, exist_ok=True)
+
+    caminho_arquivo = os.path.join(diretorio_destino, "debate_result.json")
+
+    dados_salvar = {
+        "alegacao": alegacao,
+        "timestamp": datetime.now().isoformat(),
+        "historico_debate": state.get("historico_debate") or state.get("debate_history", []),
+        "parecer_juiz": state.get("parecer_juiz", {}),
+        "homologado_por_humano": state.get("homologado_por_humano", True),
+    }
+
+    with open(caminho_arquivo, "w", encoding="utf-8") as f:
+        json.dump(dados_salvar, f, indent=4, ensure_ascii=False)
+
+    return caminho_arquivo
 
 
 def main() -> None:
@@ -94,21 +134,25 @@ def main() -> None:
     # 5. Finalização
     if decisao in ["s", "sim", "y", "yes"]:
         veredicto_nome = parecer.get("veredicto", "Procedente") if parecer else "Procedente"
-        graph.update_state(
-            config,
-            {
-                "homologado_por_humano": True,
-                "aprovado_humano": True,
-                "veredicto_final": f"Veredicto '{veredicto_nome}' homologado pelo Presidente do Tribunal.",
-            },
-        )
+        estado_final_atualizado = {
+            "homologado_por_humano": True,
+            "aprovado_humano": True,
+            "veredicto_final": f"Veredicto '{veredicto_nome}' homologado pelo Presidente do Tribunal.",
+        }
+        graph.update_state(config, estado_final_atualizado)
         # Retoma o grafo para concluir a execução
         for _ in graph.stream(None, config=config):
             pass
 
+        # Obter estado consolidado para salvar em JSON
+        estado_completo = graph.get_state(config).values
+        caminho_salvo = salvar_registro_debate(estado_completo)
+
         exibir_separador("=")
         print(f"\n[OK] Veredito '{veredicto_nome}' devidamente HOMOLOGADO pelo Presidente do Tribunal.")
-        print("[*] Debate encerrado com sucesso.\n")
+        print(f"[💾] Registro completo do debate salvo com sucesso em:")
+        print(f"     -> {os.path.abspath(caminho_salvo)}")
+        print("\n[*] Debate encerrado com sucesso.\n")
         exibir_separador("=")
     else:
         graph.update_state(
