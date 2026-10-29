@@ -52,9 +52,10 @@ class VereditoJuriModel(BaseModel):
     votos: List[VotoJuizModel] = Field(description="Lista com os votos dos 3 juízes")
 
 def agente_pro(state: ArenaState) -> dict:
+    rodada_atual = state.get("rodada_atual") or state.get("current_round", 1)
+    print(f"[*] [Agente Pró] Pesquisando evidências e elaborando defesa (Rodada {rodada_atual})...", flush=True)
     alegacao = state.get("alegacao") or state.get("claim", "")
     historico = state.get("historico_debate") or state.get("debate_history", [])
-    rodada_atual = state.get("rodada_atual") or state.get("current_round", 1)
 
     ultimo_argumento_contra = None
     for turno in reversed(historico):
@@ -101,9 +102,10 @@ def agente_pro(state: ArenaState) -> dict:
     }
 
 def agente_contra(state: ArenaState) -> dict:
+    rodada_atual = state.get("rodada_atual") or state.get("current_round", 1)
+    print(f"[*] [Agente Contra] Pesquisando contraprovas e refutando (Rodada {rodada_atual})...", flush=True)
     alegacao = state.get("alegacao") or state.get("claim", "")
     historico = state.get("historico_debate") or state.get("debate_history", [])
-    rodada_atual = state.get("rodada_atual") or state.get("current_round", 1)
 
     ultimo_argumento_pro = ""
     for turno in reversed(historico):
@@ -141,6 +143,7 @@ def agente_contra(state: ArenaState) -> dict:
 
 
 def colegiado_juri(state: ArenaState) -> dict:
+    print("[*] [Colegiado do Júri] Analisando histórico e deliberando votos...", flush=True)
     alegacao = state.get("alegacao") or state.get("claim", "")
     historico = state.get("historico_debate") or state.get("debate_history", [])
 

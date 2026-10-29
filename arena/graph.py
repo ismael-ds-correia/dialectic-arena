@@ -39,7 +39,7 @@ builder.add_edge("colegiado_juri", END)
 memory = MemorySaver()
 graph = builder.compile(
     checkpointer=memory,
-    interrupt_before=["colegiado_juri"],
+    interrupt_after=["colegiado_juri"],
 )
 
 def salvar_visualizacao_grafo(caminho_arquivo: str = "graph.png") -> None:
