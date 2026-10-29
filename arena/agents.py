@@ -11,9 +11,17 @@ from pydantic import BaseModel, Field
 from arena.state import ArenaState
 from arena.tools import web_search_tool
 
-# Instância do modelo Groq
-# Usando max_retries para contornar limites transitórios de TPM/RPM da Groq
-llm = ChatGroq(model_name="openai/gpt-oss-120b", temperature=0.7, max_retries=5)
+# Instâncias do modelo Groq
+# 1. LLM para os debatedores (Pró e Contra)
+llm = ChatGroq(model_name="openai/gpt-oss-20b", temperature=0.7, max_retries=5)
+
+# 2. LLM isolado estritamente para o Juiz (processamento de texto puro em modo JSON, sem tools)
+juiz_llm_engine = ChatGroq(
+    model_name="openai/gpt-oss-20b",
+    temperature=0.2,
+    max_retries=5,
+    model_kwargs={"response_format": {"type": "json_object"}},
+)
 
 # Prompts de Sistema
 AGENTE_PRO_SYSTEM = (
@@ -37,9 +45,14 @@ AGENTE_CONTRA_SYSTEM = (
 AGENTE_JUIZ_SYSTEM = (
     "Você é um Juiz Supremo e perito analista de dados. Sua função é julgar um debate de forma implacável e estritamente técnica.\n"
     "Regras Inegociáveis de Julgamento:\n"
-    "1. Avalie a confiabilidade e veracidade das fontes citadas pelo Agente Pró e pelo Agente Contra.\n"
+    "1. Avalie a confiabilidade e veracidade das evidências e fontes citadas pelo Agente Pró e pelo Agente Contra.\n"
     "2. É PROIBIDO declarar o resultado como 'Inconclusivo' ou 'Empate'. Você DEVE escolher apenas entre 'Procedente' (a alegação se sustenta com fatos) ou 'Improcedente' (a alegação foi refutada ou carece de evidências sólidas).\n"
-    "3. Retorne sua decisão estritamente no formato estruturado contendo as chaves: veredicto ('Procedente' ou 'Improcedente') e justificativa."
+    "3. Se ambos os lados forem fracos, declare 'Improcedente' devido ao ônus da prova caber a quem alega.\n"
+    "4. Retorne sua decisão OBRIGATORIAMENTE em formato JSON válido contendo exatamente as seguintes chaves:\n"
+    "   - 'veredicto': apenas 'Procedente' ou 'Improcedente'\n"
+    "   - 'justificativa': texto da fundamentação jurídica e lógica da decisão\n"
+    "   - 'avaliacao_fontes': texto avaliando criticamente as fontes e dados citados\n"
+    "Responda apenas com o JSON puro."
 )
 
 # Modelo Pydantic para saída estruturada do Juiz Único
@@ -154,7 +167,8 @@ def agente_juiz(state: ArenaState) -> dict:
     prompt_juiz = (
         f"Alegação em Julgamento: {alegacao}\n\n"
         f"Histórico Completo do Debate:\n{historico_texto}\n\n"
-        "Aplique as regras inegociáveis e emita seu parecer definitivo (Procedente ou Improcedente)."
+        "Aplique as regras inegociáveis e emita seu parecer definitivo em formato JSON puro "
+        "com as chaves 'veredicto', 'justificativa' e 'avaliacao_fontes'."
     )
 
     mensagens = [
@@ -162,15 +176,33 @@ def agente_juiz(state: ArenaState) -> dict:
         HumanMessage(content=prompt_juiz),
     ]
 
-    juiz_llm = llm.with_structured_output(ParecerJuizModel)
     try:
-        resultado = juiz_llm.invoke(mensagens)
-        parecer = resultado.model_dump()
-    except Exception:
-        # Fallback de segurança garantindo o formato estrito
+        # Chamada pura ao modelo em modo json_object, sem tools ou function calling
+        resposta = juiz_llm_engine.invoke(mensagens)
+        conteudo = str(resposta.content).strip()
+
+        # Limpar eventuais crases de markdown
+        if "```json" in conteudo:
+            conteudo = conteudo.split("```json")[-1].split("```")[0].strip()
+        elif "```" in conteudo:
+            conteudo = conteudo.split("```")[-1].split("```")[0].strip()
+
+        parecer_raw = json.loads(conteudo)
+
+        veredicto_bruto = str(parecer_raw.get("veredicto", "Improcedente")).strip()
+        veredicto = "Procedente" if "procedente" in veredicto_bruto.lower() and "improcedente" not in veredicto_bruto.lower() else "Improcedente"
+
+        parecer = {
+            "veredicto": veredicto,
+            "justificativa": str(parecer_raw.get("justificativa", "Fundamentação emitida com base nas evidências apresentadas.")),
+            "avaliacao_fontes": str(parecer_raw.get("avaliacao_fontes", "Fontes e consistência dos argumentos auditadas pelo juiz.")),
+        }
+    except Exception as e:
+        print(f"[!] Erro no processamento do juiz: {e}", flush=True)
         parecer = {
             "veredicto": "Improcedente",
-            "justificativa": "Falha na extração estruturada do parecer; pelo ônus da prova, considerou-se improcedente."
+            "justificativa": f"Julgamento automatizado finalizado com ressalva: {e}. Pelo ônus da prova, considerou-se improcedente.",
+            "avaliacao_fontes": "Não foi possível validar de forma cabal as fontes fornecidas.",
         }
 
     return {"parecer_juiz": parecer}

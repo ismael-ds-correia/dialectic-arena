@@ -14,9 +14,10 @@ class DebateTurn(TypedDict, total=False):
     argument: str
 
 
-class ParecerJuiz(TypedDict):
+class ParecerJuiz(TypedDict, total=False):
     veredicto: Literal["Procedente", "Improcedente"]
     justificativa: str
+    avaliacao_fontes: str
 
 
 class ArenaState(TypedDict, total=False):
