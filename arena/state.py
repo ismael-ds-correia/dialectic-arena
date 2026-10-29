@@ -14,16 +14,9 @@ class DebateTurn(TypedDict, total=False):
     argument: str
 
 
-class JudgeVote(TypedDict, total=False):
-    # Campos em Português
-    juiz: str
-    voto: str
+class ParecerJuiz(TypedDict):
+    veredicto: Literal["Procedente", "Improcedente"]
     justificativa: str
-
-    # Campos em Inglês
-    judge: str
-    vote: str
-    rationale: str
 
 
 class ArenaState(TypedDict, total=False):
@@ -31,7 +24,7 @@ class ArenaState(TypedDict, total=False):
     alegacao: str
     historico_debate: Annotated[List[Dict[str, Any]], operator.add]
     rodada_atual: int
-    votos_juri: List[Dict[str, Any]]
+    parecer_juiz: ParecerJuiz
     veredicto_final: str
     homologado_por_humano: bool
     aprovado_humano: bool
@@ -40,6 +33,5 @@ class ArenaState(TypedDict, total=False):
     claim: str
     debate_history: Annotated[List[Dict[str, Any]], operator.add]
     current_round: int
-    jury_votes: List[Dict[str, Any]]
     final_verdict: str
     human_approved: bool

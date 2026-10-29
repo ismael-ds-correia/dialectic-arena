@@ -12,8 +12,10 @@ load_dotenv()
 
 from arena.graph import graph
 
+
 def exibir_separador(caractere: str = "=", tamanho: int = 70) -> None:
     print(caractere * tamanho)
+
 
 def formatar_argumento(turno: dict) -> None:
     autor = turno.get("autor") or turno.get("author", "Desconhecido")
@@ -26,19 +28,21 @@ def formatar_argumento(turno: dict) -> None:
     print(argumento.strip())
     print()
 
-def exibir_votos_juri(votos: list) -> None:
-    exibir_separador("=")
-    print("\n  PARECER DO COLEGIADO DE JUIZES  \n")
-    exibir_separador("=")
-    for item in votos:
-        juiz = item.get("juiz") or item.get("judge", "Juiz")
-        voto = item.get("voto") or item.get("vote", "N/A")
-        justificativa = item.get("justificativa") or item.get("rationale", "")
 
-        print(f"\n• {juiz}")
-        print(f"  Voto: {voto}")
-        print(f"  Justificativa: {justificativa}\n")
+def exibir_parecer_juiz(parecer: dict) -> None:
+    exibir_separador("=")
+    print("           PARECER DO JUIZ TÉCNICO RIGOROSO")
+    exibir_separador("=")
+
+    veredicto = parecer.get("veredicto", "N/A")
+    justificativa = parecer.get("justificativa", "N/A")
+
+    print(f"\n⚖️  VEREDICTO DO JUIZ: {veredicto.upper()}")
+    print("\n📜 FUNDAMENTAÇÃO TÉCNICA:")
+    print(justificativa)
+    print()
     exibir_separador("-")
+
 
 def main() -> None:
     exibir_separador("=")
@@ -60,7 +64,7 @@ def main() -> None:
         "alegacao": alegacao,
         "historico_debate": [],
         "rodada_atual": 1,
-        "votos_juri": [],
+        "parecer_juiz": {},
         "veredicto_final": "",
         "aprovado_humano": False,
         "homologado_por_humano": False,
@@ -80,21 +84,22 @@ def main() -> None:
     snapshot = graph.get_state(config)
     estado_atual = snapshot.values
 
-    votos = estado_atual.get("votos_juri", [])
-    if votos:
-        exibir_votos_juri(votos)
+    parecer = estado_atual.get("parecer_juiz")
+    if parecer:
+        exibir_parecer_juiz(parecer)
 
-    print("\n--- DECISAO DA PRESIDENCIA DO TRIBUNAL ---")
-    decisao = input("Voce, como Presidente do Tribunal, homologa esse veredito? (s/n): ").strip().lower()
+    print("\n--- DECISÃO DA PRESIDÊNCIA DO TRIBUNAL ---")
+    decisao = input("Você, como Presidente do Tribunal, homologa esse veredito? (s/n): ").strip().lower()
 
     # 5. Finalização
     if decisao in ["s", "sim", "y", "yes"]:
+        veredicto_nome = parecer.get("veredicto", "Procedente") if parecer else "Procedente"
         graph.update_state(
             config,
             {
                 "homologado_por_humano": True,
                 "aprovado_humano": True,
-                "veredicto_final": "Homologado pelo Presidente do Tribunal.",
+                "veredicto_final": f"Veredicto '{veredicto_nome}' homologado pelo Presidente do Tribunal.",
             },
         )
         # Retoma o grafo para concluir a execução
@@ -102,7 +107,7 @@ def main() -> None:
             pass
 
         exibir_separador("=")
-        print("\n[OK] Veredito devidamente HOMOLOGADO pelo Presidente do Tribunal.")
+        print(f"\n[OK] Veredito '{veredicto_nome}' devidamente HOMOLOGADO pelo Presidente do Tribunal.")
         print("[*] Debate encerrado com sucesso.\n")
         exibir_separador("=")
     else:
@@ -111,13 +116,14 @@ def main() -> None:
             {
                 "homologado_por_humano": False,
                 "aprovado_humano": False,
-                "veredicto_final": "Rejeitado pelo Presidente do Tribunal.",
+                "veredicto_final": "Veredicto rejeitado pelo Presidente do Tribunal.",
             },
         )
         exibir_separador("=")
         print("\n[!] O veredito foi DESCARTADO/REJEITADO pelo Presidente do Tribunal.")
-        print("[*] Execucao finalizada sem homologacao.\n")
+        print("[*] Execução finalizada sem homologação.\n")
         exibir_separador("=")
+
 
 if __name__ == "__main__":
     main()
