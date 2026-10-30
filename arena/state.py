@@ -1,7 +1,6 @@
 import operator
 from typing import Annotated, Any, Dict, List, Literal, TypedDict
 
-
 class DebateTurn(TypedDict, total=False):
     # Campos em Português
     autor: Literal["Pró", "Contra", "Pro", "Con"]
@@ -13,12 +12,10 @@ class DebateTurn(TypedDict, total=False):
     round: int
     argument: str
 
-
 class ParecerJuiz(TypedDict, total=False):
     veredicto: Literal["Procedente", "Improcedente"]
     justificativa: str
     avaliacao_fontes: str
-
 
 class ArenaState(TypedDict, total=False):
     # Campos em Português

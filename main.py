@@ -17,10 +17,8 @@ load_dotenv()
 
 from arena.graph import graph
 
-
 def exibir_separador(caractere: str = "=", tamanho: int = 70) -> None:
     print(caractere * tamanho)
-
 
 def formatar_argumento(turno: dict) -> None:
     autor = turno.get("autor") or turno.get("author", "Desconhecido")
@@ -32,7 +30,6 @@ def formatar_argumento(turno: dict) -> None:
     print(f"\n{prefixo} Rodada {rodada} - {autor.upper()}:\n")
     print(argumento.strip())
     print()
-
 
 def exibir_parecer_juiz(parecer: dict) -> None:
     exibir_separador("=")
@@ -48,7 +45,6 @@ def exibir_parecer_juiz(parecer: dict) -> None:
     print()
     exibir_separador("-")
 
-
 def sanitizar_nome_diretorio(texto: str, tamanho_maximo: int = 50) -> str:
     """Sanitiza o texto removendo acentos, caracteres especiais e substituindo espaços por hífens."""
     # Normalizar caracteres unicode (remover acentuação)
@@ -59,7 +55,6 @@ def sanitizar_nome_diretorio(texto: str, tamanho_maximo: int = 50) -> str:
     slug = re.sub(r"[\s]+", "-", texto_limpo)
     # Limitar o tamanho máximo sem quebrar no meio de hífens finais
     return slug[:tamanho_maximo].rstrip("-") or "debate"
-
 
 def salvar_registro_debate(state: dict) -> str:
     """Salva o histórico e o parecer do debate em formato JSON dentro de debates/<slug-alegacao>/."""
@@ -82,7 +77,6 @@ def salvar_registro_debate(state: dict) -> str:
         json.dump(dados_salvar, f, indent=4, ensure_ascii=False)
 
     return caminho_arquivo
-
 
 def main() -> None:
     exibir_separador("=")
@@ -167,7 +161,6 @@ def main() -> None:
         print("\n[!] O veredito foi DESCARTADO/REJEITADO pelo Presidente do Tribunal.")
         print("[*] Execução finalizada sem homologação.\n")
         exibir_separador("=")
-
 
 if __name__ == "__main__":
     main()

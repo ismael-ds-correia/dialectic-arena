@@ -1,9 +1,7 @@
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
-
 from arena.agents import agente_contra, agente_juiz, agente_pro
 from arena.state import ArenaState
-
 
 def deve_continuar_debate(state: ArenaState) -> str:
     """Decide se o debate continua para a próxima rodada ou vai para o juiz."""
@@ -11,7 +9,6 @@ def deve_continuar_debate(state: ArenaState) -> str:
     if rodada <= 3:
         return "agente_pro"
     return "agente_juiz"
-
 
 # 1. Criação do Builder
 builder = StateGraph(ArenaState)
@@ -45,7 +42,6 @@ graph = builder.compile(
     interrupt_after=["agente_juiz"],
 )
 
-
 def salvar_visualizacao_grafo(caminho_arquivo: str = "graph.png") -> None:
     """Salva a imagem do fluxo do grafo em formato PNG."""
     try:
@@ -54,7 +50,6 @@ def salvar_visualizacao_grafo(caminho_arquivo: str = "graph.png") -> None:
             f.write(imagem_bytes)
     except Exception as e:
         print(f"Não foi possível salvar o gráfico em imagem: {e}")
-
 
 if __name__ == "__main__":
     salvar_visualizacao_grafo()

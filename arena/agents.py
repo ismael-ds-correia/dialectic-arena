@@ -1,16 +1,13 @@
 import json
-from typing import Any, Dict, List, Literal
-from dotenv import load_dotenv
-
-load_dotenv()
-
+from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
-
 from arena.state import ArenaState
 from arena.tools import web_search_tool
+from dotenv import load_dotenv
 
+load_dotenv()
 # Instâncias do modelo Groq
 # 1. LLM para os debatedores (Pró e Contra)
 llm = ChatGroq(model_name="openai/gpt-oss-20b", temperature=0.7, max_retries=5)
