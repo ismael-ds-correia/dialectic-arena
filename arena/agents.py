@@ -84,13 +84,29 @@ def agente_pro(state: ArenaState) -> dict:
     res_busca = web_search_tool.invoke(query)
     evidencias_str = str(res_busca)
 
-    prompt_usuario = (
-        f"Alegação: {alegacao}\n"
-        f"Evidências encontradas: {evidencias_str}\n\n"
-        "Apresente seus argumentos de defesa com base nessas evidências."
-    )
-    if ultimo_argumento_contra:
-        prompt_usuario = f"Contestação anterior: {ultimo_argumento_contra}\n" + prompt_usuario
+    debate_formatado = []
+    for turno in historico:
+        autor = turno.get("autor") or turno.get("author")
+        rodada = turno.get("rodada") or turno.get("round")
+        argumento = turno.get("argumento") or turno.get("argument")
+        debate_formatado.append(f"[Rodada {rodada} - {autor}]: {argumento}")
+    historico_formatado = "\n\n".join(debate_formatado) if debate_formatado else "Início do debate (sem falas anteriores)."
+
+    prompt_usuario = f"""
+Alegação sob debate: "{alegacao}"
+
+--- REGRAS INEGOCIÁVEIS DE PAPEL ---
+1. Você é o ADVOGADO DE DEFESA da afirmação: "{alegacao}".
+2. Seu único objetivo é DEFENDER que esta afirmação é verdadeira, plausível ou fundamentada.
+3. É ESTRITAMENTE PROIBIDO mudar de lado, dar razão ao opositor ou concluir que a alegação é falsa.
+4. Se os resultados das buscas trouxerem checagens de fatos ou notas oficiais desmentindo a tese, NÃO CONCORDE COM ELAS. Em vez disso, use-as para apontar brechas, questionar narrativas oficiais, apontar falta de transparência ou sugerir que as checagens são incompletas.
+------------------------------------
+
+Evidências de busca encontradas: {evidencias_str}
+Histórico do debate até agora: {historico_formatado}
+
+Elabore seu argumento/réplica de defesa agora:
+"""
 
     mensagens = [
         SystemMessage(content=AGENTE_PRO_SYSTEM),
@@ -124,17 +140,27 @@ def agente_contra(state: ArenaState) -> dict:
 
     query = f"checagem de fatos contraprovas críticas '{alegacao}' '{ultimo_argumento_pro[:120]}'"
     evidencias = web_search_tool.invoke(query)
+    evidencias_str = str(evidencias)
 
-    prompt_contexto = (
-        f"Alegação em debate: {alegacao}\n\n"
-        f"Último argumento do Agente Pró:\n{ultimo_argumento_pro}\n\n"
-        f"Evidências e contraprovas pesquisadas:\n{evidencias}\n\n"
-        "Construa sua refutação com base nas evidências e lógica rigorosa."
-    )
+    prompt_usuario = f"""
+Alegação sob debate: "{alegacao}"
+
+--- REGRAS INEGOCIÁVEIS DE PAPEL ---
+1. Você é o PROMOTOR DE ACUSAÇÃO/REFUTAÇÃO da afirmação: "{alegacao}".
+2. Seu único objetivo é PROVAR que esta afirmação é falsa, improcedente ou carece de evidências.
+3. É ESTRITAMENTE PROIBIDO concordar com o Agente Pró ou aceitar a alegação como verdadeira.
+4. Use dados da busca, checagens de fatos e lógica rigorosa para desconstruir os argumentos do Pró.
+------------------------------------
+
+Evidências de busca encontradas: {evidencias_str}
+Último argumento do Pró: {ultimo_argumento_pro}
+
+Elabore seu contra-argumento/tréplica agora:
+"""
 
     mensagens = [
         SystemMessage(content=AGENTE_CONTRA_SYSTEM),
-        HumanMessage(content=prompt_contexto),
+        HumanMessage(content=prompt_usuario),
     ]
 
     resposta = llm.invoke(mensagens)
